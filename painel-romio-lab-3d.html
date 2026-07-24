@@ -1,0 +1,1022 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Romio Lab 3D — Central de Produção</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
+
+:root {
+  --bg: #0B1220;
+  --bg-elevated: #0D1626;
+  --surface: #111B2E;
+  --surface-2: #16223A;
+  --border: #1E2B47;
+  --border-soft: #182238;
+  --cobalt: #2F7FE0;
+  --cobalt-dark: #1F5FB3;
+  --cobalt-soft: rgba(47,127,224,0.14);
+  --amber: #D97706;
+  --amber-soft: rgba(217,118,6,0.12);
+  --amber-text: #F0A94E;
+  --text: #E4EAF5;
+  --text-dim: #9FB0CB;
+  --text-faint: #6C7B99;
+  --danger: #E4536B;
+  --silver-1: #F4F6F9;
+  --silver-2: #C7CDD9;
+  --silver-3: #8A93A6;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background:
+    radial-gradient(1200px 600px at 15% -10%, rgba(47,127,224,0.10), transparent 60%),
+    radial-gradient(900px 500px at 110% 10%, rgba(217,118,6,0.05), transparent 60%),
+    var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+.font-display { font-family: 'Rajdhani', sans-serif; letter-spacing: 0.02em; }
+.font-num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+::-webkit-scrollbar { height: 6px; width: 6px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+@media (min-width: 768px) { .wrap { padding: 0 24px; } }
+
+/* icons */
+.icon { width:16px; height:16px; flex-shrink:0; display:inline-block; vertical-align:middle; }
+.icon-sm { width:14px; height:14px; }
+.icon-md { width:20px; height:20px; }
+.icon-lg { width:26px; height:26px; }
+.icon-xl { width:44px; height:44px; }
+
+/* header */
+.app-header { border-bottom: 1px solid var(--border); background: var(--bg-elevated); box-shadow: 0 1px 0 rgba(47,127,224,0.15); }
+.app-header-inner { display:flex; flex-direction:column; gap:16px; padding:18px 0; }
+@media (min-width:768px) { .app-header-inner { flex-direction:row; align-items:center; justify-content:space-between; } }
+.brand { display:flex; align-items:center; gap:12px; }
+.brand-mark { width:46px; height:46px; border-radius:12px; background:linear-gradient(160deg,#141f34,#0a0f1c); border:1px solid var(--cobalt); display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 0 0 1px rgba(47,127,224,0.15), 0 4px 16px rgba(47,127,224,0.3); }
+.brand-mark span { font-family:'Rajdhani',sans-serif; font-weight:700; font-size:23px; }
+.brand-name-row { display:flex; align-items:baseline; gap:6px; }
+.brand-name { font-family:'Rajdhani',sans-serif; font-weight:700; font-size:22px; letter-spacing:0.03em; line-height:1; text-transform:uppercase; }
+.brand-name .metal { }
+.brand-sub-title { display:block; font-size:11px; letter-spacing:0.14em; color:var(--text-dim); font-weight:600; margin-top:4px; text-transform:uppercase; }
+.brand-tagline { font-size:11px; color:var(--text-faint); margin-top:2px; letter-spacing:0.02em; }
+
+.machine-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.machine-pill { display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:6px 12px 6px 8px; }
+.status-dot { width:8px; height:8px; border-radius:999px; flex-shrink:0; box-shadow:0 0 6px currentColor; }
+.machine-pill .name { font-size:12px; font-weight:600; color:var(--text-dim); }
+
+/* nav */
+.tab-nav { background: var(--bg-elevated); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:10; }
+.tab-nav-inner { display:flex; gap:2px; overflow-x:auto; }
+.tab-btn { position:relative; display:flex; align-items:center; gap:8px; padding:14px 16px; font-size:13px; font-weight:600; white-space:nowrap; border:none; background:none; cursor:pointer; color:var(--text-dim); border-bottom:2px solid transparent; font-family:'Inter',sans-serif; transition:color .15s, border-color .15s; }
+.tab-btn:hover { color:var(--text); }
+.tab-btn.active { color:var(--cobalt); border-bottom-color:var(--cobalt); }
+.tab-badge { position:absolute; top:6px; right:2px; width:16px; height:16px; border-radius:999px; background:var(--amber); color:#1a1206; font-size:10px; display:flex; align-items:center; justify-content:center; font-weight:700; }
+
+main.content { padding: 24px 0 96px; }
+
+/* cards */
+.card { background:var(--surface); border:1px solid var(--border); border-radius:16px; }
+.card-pad { padding:20px; }
+.card-header { padding:16px 20px; border-bottom:1px solid var(--border-soft); }
+.card-title { font-family:'Rajdhani',sans-serif; font-weight:700; font-size:15px; letter-spacing:.02em; margin:0; color: var(--text); }
+
+.grid { display:grid; gap:16px; }
+.grid-4 { grid-template-columns:repeat(2,1fr); }
+.grid-3 { grid-template-columns:1fr; }
+@media (min-width:768px) { .grid-4{grid-template-columns:repeat(4,1fr);} .grid-3{grid-template-columns:repeat(3,1fr);} }
+
+.form-grid { display:grid; grid-template-columns:1fr; gap:16px; }
+.form-grid-2 { grid-template-columns:1fr; }
+.form-grid-3 { grid-template-columns:1fr; }
+@media (min-width:640px) { .form-grid-2{grid-template-columns:1fr 1fr;} .form-grid-3{grid-template-columns:repeat(3,1fr);} }
+
+.stat-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim); margin:0; }
+.stat-value { font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:700; margin:6px 0 0; }
+.metal { background:linear-gradient(180deg,var(--silver-1) 0%, var(--silver-2) 45%, var(--silver-3) 60%, var(--silver-1) 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.amber-text { color: var(--amber-text); }
+
+.alert-box { background:var(--amber-soft); border:1px solid rgba(217,118,6,0.35); border-radius:16px; padding:16px; display:flex; gap:12px; }
+.alert-box .icon { color:var(--amber); margin-top:2px; }
+.alert-box .title { font-weight:700; font-size:13px; color:var(--amber-text); margin:0; }
+.alert-box ul { margin:6px 0 0; padding-left:18px; font-size:13px; color:#E9C48C; }
+.alert-box li { margin-top:2px; }
+
+table.data-table { width:100%; border-collapse:collapse; font-size:13px; }
+table.data-table thead th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-faint); padding:10px 20px; font-weight:600; }
+table.data-table td { padding:10px 20px; border-top:1px solid var(--border-soft); }
+table.data-table td.num { font-family:'JetBrains Mono',monospace; text-align:right; }
+
+.empty-state { text-align:center; padding:72px 16px; }
+.empty-state .icon-wrap { color:var(--silver-3); margin-bottom:12px; }
+.empty-state h2 { font-family:'Rajdhani',sans-serif; font-weight:700; font-size:19px; color:var(--text); margin:0; }
+.empty-state p { font-size:13px; color:var(--text-dim); max-width:440px; margin:8px auto 0; line-height:1.6; }
+.empty-state strong { color:var(--cobalt); }
+
+label.field-label { font-size:11px; font-weight:600; color:var(--text-dim); text-transform:uppercase; letter-spacing:.04em; display:block; }
+input, select {
+  width:100%; margin-top:6px; background:#0B1424; border:1px solid var(--border); color:var(--text);
+  border-radius:10px; padding:10px 12px; font-size:13px; font-family:'Inter',sans-serif; outline:none;
+  transition:border-color .15s, box-shadow .15s;
+}
+input[type=number], input[type=date] { font-family:'JetBrains Mono',monospace; }
+input:focus, select:focus { border-color:var(--cobalt); box-shadow:0 0 0 3px rgba(47,127,224,0.18); }
+input::placeholder { color:var(--text-faint); }
+.hint { font-size:11px; color:var(--text-faint); margin-top:6px; }
+
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; border:none; border-radius:10px; font-weight:700; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer; transition:background .15s, opacity .15s; }
+.btn-primary { background:var(--cobalt); color:#08111f; width:100%; padding:13px; }
+.btn-primary:hover { background:#4a92e6; }
+.btn-primary:disabled { opacity:.35; cursor:not-allowed; }
+.btn-primary.inline { width:auto; padding:12px 26px; }
+
+.checkbox-row { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-dim); }
+.checkbox-row input { width:16px; height:16px; margin:0; accent-color:var(--cobalt); }
+
+.preview-panel { background:linear-gradient(160deg,#0c1626,#070d18); border:1px solid var(--cobalt-soft); border-radius:16px; padding:20px; height:fit-content; }
+.preview-row { display:flex; align-items:center; justify-content:space-between; font-size:13px; padding:4px 0; gap: 12px; }
+.preview-row .k { color:var(--text-faint); }
+.preview-row .v { font-family:'JetBrains Mono',monospace; color:var(--text); text-align:right; }
+.preview-row.bold .k { color:var(--text-dim); font-weight:600; }
+.preview-row.bold .v { font-weight:700; }
+.preview-row.accent .v { color:var(--amber-text); }
+.preview-divider { height:1px; background:var(--border); margin:10px 0; }
+
+.list-row { padding:16px 20px; display:flex; align-items:center; justify-content:space-between; gap:16px; border-top:1px solid var(--border-soft); }
+.list-row:first-child { border-top:none; }
+.list-row .name { font-weight:600; font-size:13px; margin:0; }
+.list-row .meta { font-size:11px; color:var(--text-faint); margin:3px 0 0; }
+.list-row .meta2 { font-size:11px; color:var(--text-dim); margin:3px 0 0; font-family:'JetBrains Mono',monospace; }
+.icon-btn { background:none; border:none; color:var(--text-faint); cursor:pointer; padding:4px; display:flex; flex-shrink:0; }
+.icon-btn:hover { color:var(--danger); }
+
+.donut-wrap { text-align:center; flex-shrink:0; }
+.donut { width:56px; height:56px; border-radius:999px; display:flex; align-items:center; justify-content:center; }
+.donut-inner { width:40px; height:40px; border-radius:999px; background:var(--surface); display:flex; align-items:center; justify-content:center; font-size:10px; font-family:'JetBrains Mono',monospace; font-weight:700; }
+.donut-caption { font-size:8px; color:var(--text-faint); margin:2px 0 0; }
+.low-warning { color:var(--amber-text); font-size:11px; margin:4px 0 0; }
+
+.section-hint { font-size:12px; color:var(--text-faint); margin:4px 0 12px; line-height:1.5; }
+
+.toast { position:fixed; top:16px; right:16px; z-index:50; max-width:320px; padding:12px 16px; border-radius:10px; font-size:13px; font-weight:600; color:#fff; box-shadow:0 10px 30px rgba(0,0,0,.5); }
+.toast.success { background: var(--cobalt-dark); border:1px solid var(--cobalt); }
+.toast.error { background:#7a1f2b; border:1px solid var(--danger); }
+
+.brand-footer { border-top:1px solid var(--border); padding:32px 0 44px; margin-top:8px; }
+.brand-footer .tagline { text-align:center; font-family:'Rajdhani',sans-serif; font-weight:600; font-size:13px; letter-spacing:.16em; text-transform:uppercase; color:var(--cobalt); margin:0; }
+.brand-footer .tagline b { color:var(--amber); font-weight:700; }
+.brand-icons { display:flex; justify-content:center; gap:32px; margin-top:22px; flex-wrap:wrap; }
+.brand-icon-item { display:flex; flex-direction:column; align-items:center; gap:8px; color:var(--text-dim); }
+.brand-icon-item .icon { color:var(--silver-2); }
+.brand-icon-item span { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; font-family:'Rajdhani',sans-serif; }
+
+.loading-screen { min-height:60vh; display:flex; align-items:center; justify-content:center; color:var(--text-faint); font-family:'JetBrains Mono',monospace; font-size:13px; letter-spacing:.05em; }
+</style>
+</head>
+<body>
+<div id="toast-root"></div>
+<div id="app-root"><div class="loading-screen">carregando painel...</div></div>
+
+<script>
+/* ---------- storage shim (localStorage-backed, same interface the original relied on) ---------- */
+const STORAGE_PREFIX = 'romio_lab_3d__';
+window.storage = {
+  async get(key) {
+    try {
+      const raw = localStorage.getItem(STORAGE_PREFIX + key);
+      return raw === null ? null : { value: raw };
+    } catch (e) { return null; }
+  },
+  async set(key, value) {
+    localStorage.setItem(STORAGE_PREFIX + key, value);
+  },
+};
+
+/* ---------- formatting helpers ---------- */
+const fmtBRL = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number.isFinite(n) ? n : 0);
+const fmtNum = (n, d = 0) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }).format(Number.isFinite(n) ? n : 0);
+const uid = () => Math.random().toString(36).slice(2, 10);
+const todayStr = () => new Date().toISOString().slice(0, 10);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ---------- domain config / constants (identical to the original) ---------- */
+const DEFAULT_CONFIG = {
+  energyPricePerKWh: 0.85,
+  printerPowerWatts: 150,
+  laborCostDefaultPerPiece: 3,
+  packagingCostDefault: 2,
+  platformFees: { shopee: 14, tiktokshop: 8, direto: 0 },
+  machines: [
+    { id: 'm1', name: 'Máquina 1', status: 'ativa' },
+    { id: 'm2', name: 'Máquina 2', status: 'aguardando' },
+    { id: 'm3', name: 'Máquina 3', status: 'aguardando' },
+  ],
+};
+
+const MACHINE_STATUS = {
+  ativa: { label: 'Imprimindo', dot: 'var(--cobalt)' },
+  parada: { label: 'Parada', dot: 'var(--silver-3)' },
+  aguardando: { label: 'Aguardando instalação', dot: 'var(--amber)' },
+  manutencao: { label: 'Manutenção', dot: 'var(--danger)' },
+};
+
+const PLATFORM_NAMES = { shopee: 'Shopee', tiktokshop: 'TikTok Shop', direto: 'Venda Direta' };
+
+function computeUnitCost(piece, filamentStock, config) {
+  const fil = filamentStock.find((f) => f.id === piece.filamentId);
+  const pricePerKg = fil ? fil.pricePerKg : 0;
+  const filamentCost = (piece.weightGrams / 1000) * pricePerKg;
+  const energyCost = piece.printHours * (config.printerPowerWatts / 1000) * config.energyPricePerKWh;
+  const laborCost = piece.laborCostOverride ?? config.laborCostDefaultPerPiece;
+  const packagingCost = piece.packagingCostOverride ?? config.packagingCostDefault;
+  const productionCost = filamentCost + energyCost + laborCost + packagingCost;
+  return { filamentCost, energyCost, laborCost, packagingCost, productionCost, filamentName: fil ? fil.name : '—' };
+}
+
+function computeTotals(sales) {
+  const totalRevenue = sales.reduce((a, s) => a + s.totalRevenue, 0);
+  const totalProfit = sales.reduce((a, s) => a + s.totalProfit, 0);
+  const unitsSold = sales.reduce((a, s) => a + s.quantity, 0);
+  const avgMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+  const byPlatform = sales.reduce((acc, s) => {
+    acc[s.platform] = acc[s.platform] || { revenue: 0, profit: 0, qty: 0 };
+    acc[s.platform].revenue += s.totalRevenue;
+    acc[s.platform].profit += s.totalProfit;
+    acc[s.platform].qty += s.quantity;
+    return acc;
+  }, {});
+  return { totalRevenue, totalProfit, unitsSold, avgMargin, byPlatform };
+}
+
+const TABS = [
+  { id: 'overview', label: 'Visão Geral', icon: 'trendingUp' },
+  { id: 'sale', label: 'Registrar Venda', icon: 'cart' },
+  { id: 'production', label: 'Registrar Produção', icon: 'packagePlus' },
+  { id: 'catalog', label: 'Catálogo de Peças', icon: 'layers' },
+  { id: 'filament', label: 'Estoque de Filamento', icon: 'boxes' },
+  { id: 'config', label: 'Configurações', icon: 'settings' },
+];
+
+/* ---------- icons (thin line-art, matching the logo's style) ---------- */
+const ICON_PATHS = {
+  trendingUp: '<polyline points="3,17 9,11 13,15 21,6"></polyline><polyline points="15,6 21,6 21,12"></polyline>',
+  cart: '<circle cx="9" cy="20" r="1.4"></circle><circle cx="17" cy="20" r="1.4"></circle><path d="M3 4h2l2 11h10l2-8H6.4"></path>',
+  packagePlus: '<rect x="3.5" y="8.5" width="12" height="11" rx="1.5"></rect><path d="M3.5 12.5h12"></path><path d="M19.5 5v6M16.5 8h6"></path>',
+  layers: '<polygon points="12,4 20,8.5 12,13 4,8.5"></polygon><polyline points="4,12.5 12,17 20,12.5"></polyline><polyline points="4,16.5 12,21 20,16.5"></polyline>',
+  boxes: '<rect x="3" y="10" width="8" height="8" rx="1"></rect><rect x="13" y="6" width="8" height="8" rx="1"></rect>',
+  settings: '<circle cx="12" cy="12" r="3"></circle><path d="M12 2.5v3M12 18.5v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2.5 12h3M18.5 12h3M4.9 19.1l2.1-2.1M17 7l2.1-2.1"></path>',
+  alertTriangle: '<path d="M12 3 22 20H2Z"></path><line x1="12" y1="9.5" x2="12" y2="14"></line><circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none"></circle>',
+  trash: '<path d="M4 7h16"></path><path d="M9 7V4.5h6V7"></path><path d="M6.2 7l0.9 12.5a1 1 0 0 0 1 .9h7.8a1 1 0 0 0 1-.9L17.8 7"></path><path d="M10 11v6M14 11v6"></path>',
+  printerDrip: '<path d="M7.5 3.5h9v5h-9z"></path><path d="M9.5 8.5v2.5h5V8.5"></path><path d="M12 11v3"></path><path d="M9.3 14.5h5.4l-2.7 4z"></path>',
+  monitorCube: '<rect x="3" y="4" width="18" height="12" rx="1.2"></rect><path d="M8.5 20h7M12 16v4"></path><path d="M9 9.2 12 7.6l3 1.6v3.2L12 14l-3-1.6z"></path>',
+  cubeSpark: '<path d="M6 8.2 12 5l6 3.2v6.8L12 18l-6-3z"></path><path d="M6 8.2 12 11.4l6-3.2"></path><path d="M12 11.4v6.6"></path><path d="M18.5 3 19.2 4.6 20.8 5.3 19.2 6 18.5 7.6 17.8 6 16.2 5.3 17.8 4.6Z"></path>',
+};
+function Icon(name, cls) {
+  return '<svg class="icon ' + (cls || '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + (ICON_PATHS[name] || '') + '</svg>';
+}
+
+/* ---------- app state ---------- */
+const state = {
+  loading: true,
+  tab: 'overview',
+  config: DEFAULT_CONFIG,
+  catalog: [],
+  filamentStock: [],
+  finishedStock: {},
+  sales: [],
+  productionLog: [],
+};
+
+function showToast(msg, type) {
+  const root = document.getElementById('toast-root');
+  root.innerHTML = '<div class="toast ' + (type === 'error' ? 'error' : 'success') + '">' + esc(msg) + '</div>';
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(() => { root.innerHTML = ''; }, 3200);
+}
+
+async function persistConfig(next) {
+  state.config = next;
+  try { await window.storage.set('config', JSON.stringify(next)); }
+  catch (e) { showToast('Não consegui salvar as configurações. Tente de novo.', 'error'); }
+}
+async function persistInventory(nextCatalog, nextFilament, nextFinished) {
+  state.catalog = nextCatalog; state.filamentStock = nextFilament; state.finishedStock = nextFinished;
+  try { await window.storage.set('inventory', JSON.stringify({ catalog: nextCatalog, filamentStock: nextFilament, finishedStock: nextFinished })); }
+  catch (e) { showToast('Não consegui salvar o estoque. Tente de novo.', 'error'); }
+}
+async function persistSales(next) {
+  state.sales = next;
+  try { await window.storage.set('sales', JSON.stringify(next)); }
+  catch (e) { showToast('Não consegui salvar a venda. Tente de novo.', 'error'); }
+}
+async function persistProductionLog(next) {
+  state.productionLog = next;
+  try { await window.storage.set('productionLog', JSON.stringify(next)); }
+  catch (e) { showToast('Não consegui salvar a produção. Tente de novo.', 'error'); }
+}
+
+function currentAlerts() {
+  const lowFilament = state.filamentStock.filter((f) => f.kg < 0.2);
+  const lowFinished = state.catalog.filter((p) => (state.finishedStock[p.id] || 0) < 2);
+  return lowFilament.length + lowFinished.length;
+}
+
+function emptyNotice(html) {
+  return '<div style="text-align:center;padding:64px 16px"><p style="font-size:13px;color:var(--text-dim)">' + html + '</p></div>';
+}
+
+/* ---------- header / nav / footer ---------- */
+function renderHeader(config) {
+  const pills = config.machines.map((m) => {
+    const s = MACHINE_STATUS[m.status] || MACHINE_STATUS.parada;
+    return '<div class="machine-pill"><span class="status-dot" style="background:' + s.dot + ';color:' + s.dot + '"></span><span class="name">' + esc(m.name) + '</span></div>';
+  }).join('');
+  return (
+    '<header class="app-header"><div class="wrap app-header-inner">' +
+      '<div class="brand">' +
+        '<div class="brand-mark"><span class="metal">R</span></div>' +
+        '<div>' +
+          '<div class="brand-name-row"><span class="brand-name metal">ROMIO</span><span class="brand-name" style="color:var(--cobalt)">LAB</span><span class="brand-name" style="color:var(--amber)">3D</span></div>' +
+          '<span class="brand-sub-title">Central de Produção</span>' +
+          '<p class="brand-tagline">peça por peça, o que vira negócio</p>' +
+        '</div>' +
+      '</div>' +
+      '<div class="machine-row">' + pills + '</div>' +
+    '</div></header>'
+  );
+}
+
+function renderTabNav(tab, alerts) {
+  const btns = TABS.map((t) => {
+    const active = tab === t.id;
+    const badge = (t.id === 'overview' && alerts > 0) ? '<span class="tab-badge">' + alerts + '</span>' : '';
+    return '<button class="tab-btn ' + (active ? 'active' : '') + '" data-tab="' + t.id + '">' + Icon(t.icon, 'icon-sm') + t.label + badge + '</button>';
+  }).join('');
+  return '<nav class="tab-nav"><div class="wrap tab-nav-inner">' + btns + '</div></nav>';
+}
+
+function renderFooter() {
+  const items = [
+    { icon: 'printerDrip', label: 'Criar' },
+    { icon: 'monitorCube', label: 'Desenvolver' },
+    { icon: 'layers', label: 'Imprimir' },
+    { icon: 'cubeSpark', label: 'Realizar' },
+  ];
+  return (
+    '<footer class="brand-footer"><div class="wrap">' +
+      '<p class="tagline">Transformando <b>ideias</b> em realidade</p>' +
+      '<div class="brand-icons">' + items.map((i) => '<div class="brand-icon-item">' + Icon(i.icon, 'icon-lg') + '<span>' + i.label + '</span></div>').join('') + '</div>' +
+    '</div></footer>'
+  );
+}
+
+/* ---------- overview ---------- */
+function statCard(label, value, amber) {
+  return '<div class="card card-pad"><p class="stat-label">' + esc(label) + '</p><p class="stat-value ' + (amber ? 'amber-text' : 'metal') + '">' + value + '</p></div>';
+}
+
+function renderOverview() {
+  const totals = computeTotals(state.sales);
+  const lowFilament = state.filamentStock.filter((f) => f.kg < 0.2);
+  const lowFinished = state.catalog.filter((p) => (state.finishedStock[p.id] || 0) < 2);
+
+  if (state.sales.length === 0 && state.catalog.length === 0) {
+    return (
+      '<div class="empty-state">' +
+        '<div class="icon-wrap">' + Icon('printerDrip', 'icon-xl') + '</div>' +
+        '<h2>O painel está pronto, faltam as peças</h2>' +
+        '<p>Comece cadastrando sua primeira peça em <strong>Catálogo de Peças</strong> e o primeiro rolo de filamento em <strong>Estoque de Filamento</strong>. Depois disso, cada venda registrada alimenta este painel sozinha.</p>' +
+      '</div>'
+    );
+  }
+
+  const recent = state.sales.slice(-6).reverse();
+  let out = '<div class="grid grid-4" style="margin-bottom:16px">' +
+    statCard('Faturamento total', fmtBRL(totals.totalRevenue)) +
+    statCard('Lucro total', fmtBRL(totals.totalProfit), true) +
+    statCard('Peças vendidas', fmtNum(totals.unitsSold)) +
+    statCard('Margem média', fmtNum(totals.avgMargin, 1) + '%') +
+  '</div>';
+
+  if (lowFilament.length > 0 || lowFinished.length > 0) {
+    out += '<div class="alert-box" style="margin-bottom:16px">' + Icon('alertTriangle', 'icon-md') +
+      '<div><p class="title">Fique de olho no estoque</p><ul>' +
+        lowFilament.map((f) => '<li>Filamento "' + esc(f.name) + '" está com só ' + fmtNum(f.kg, 2) + ' kg</li>').join('') +
+        lowFinished.map((p) => '<li>Peça "' + esc(p.name) + '" com ' + fmtNum(state.finishedStock[p.id] || 0) + ' unidade(s) prontas</li>').join('') +
+      '</ul></div></div>';
+  }
+
+  if (Object.keys(totals.byPlatform).length > 0) {
+    out += '<div class="grid grid-3" style="margin-bottom:16px">' +
+      Object.entries(totals.byPlatform).map(([k, v]) =>
+        '<div class="card card-pad">' +
+          '<p class="stat-label">' + esc(PLATFORM_NAMES[k] || k) + '</p>' +
+          '<p class="font-num metal" style="font-size:19px;font-weight:700;margin:4px 0 0">' + fmtBRL(v.revenue) + '</p>' +
+          '<p class="font-num amber-text" style="font-size:11px;margin:4px 0 0">lucro ' + fmtBRL(v.profit) + ' · ' + v.qty + ' peça(s)</p>' +
+        '</div>'
+      ).join('') +
+    '</div>';
+  }
+
+  out += '<div class="card">' +
+    '<div class="card-header"><h3 class="card-title">Últimas vendas</h3></div>' +
+    (recent.length === 0
+      ? '<p style="padding:24px 20px;font-size:13px;color:var(--text-faint)">Nenhuma venda registrada ainda.</p>'
+      : '<div style="overflow-x:auto"><table class="data-table"><thead><tr>' +
+          '<th>Data</th><th>Peça</th><th>Plataforma</th><th style="text-align:right">Qtd</th><th style="text-align:right">Faturou</th><th style="text-align:right">Lucro</th>' +
+        '</tr></thead><tbody>' +
+          recent.map((s) =>
+            '<tr>' +
+              '<td class="font-num" style="color:var(--text-dim)">' + esc(s.date) + '</td>' +
+              '<td style="font-weight:600">' + esc(s.pieceName) + '</td>' +
+              '<td style="color:var(--text-dim)">' + esc(PLATFORM_NAMES[s.platform] || s.platform) + '</td>' +
+              '<td class="num">' + s.quantity + '</td>' +
+              '<td class="num">' + fmtBRL(s.totalRevenue) + '</td>' +
+              '<td class="num amber-text">' + fmtBRL(s.totalProfit) + '</td>' +
+            '</tr>'
+          ).join('') +
+        '</tbody></table></div>') +
+  '</div>';
+
+  return out;
+}
+
+/* ---------- sale form ---------- */
+function previewRow(label, value, bold, accent) {
+  return '<div class="preview-row ' + (bold ? 'bold' : '') + ' ' + (accent ? 'accent' : '') + '"><span class="k">' + label + '</span><span class="v">' + value + '</span></div>';
+}
+
+function renderSaleForm() {
+  if (state.catalog.length === 0) {
+    return emptyNotice('Cadastre uma peça no <strong>Catálogo</strong> antes de registrar uma venda — é o que ensina o painel a calcular o custo sozinho.');
+  }
+  const pieceOptions = state.catalog.map((p) => '<option value="' + p.id + '">' + esc(p.name) + '</option>').join('');
+  return (
+    '<div id="sale-grid" style="display:grid;gap:24px;grid-template-columns:1fr">' +
+      '<style>@media(min-width:1024px){#sale-grid{grid-template-columns:1fr 340px}}</style>' +
+      '<form id="sale-form" class="card card-pad" style="display:flex;flex-direction:column;gap:20px">' +
+        '<h2 class="card-title" style="font-size:17px">Registrar venda</h2>' +
+        '<div class="form-grid form-grid-2">' +
+          '<div><label class="field-label">Peça</label><select id="sale-piece">' + pieceOptions + '</select><p class="hint" id="sale-available"></p></div>' +
+          '<div><label class="field-label">Plataforma</label><select id="sale-platform">' +
+            '<option value="shopee">Shopee</option><option value="tiktokshop">TikTok Shop</option><option value="direto">Venda Direta</option>' +
+          '</select></div>' +
+          '<div><label class="field-label">Quantidade</label><input type="number" min="1" id="sale-qty" value="1" class="font-num"></div>' +
+          '<div><label class="field-label">Valor de venda (por unidade)</label><input type="number" step="0.01" min="0" id="sale-price" placeholder="0,00" class="font-num"></div>' +
+          '<div><label class="field-label">Data</label><input type="date" id="sale-date" value="' + todayStr() + '" class="font-num"></div>' +
+          '<div style="display:flex;align-items:flex-end"><label class="checkbox-row"><input type="checkbox" id="sale-fromstock" checked> Essa peça já estava pronta (sair do estoque)</label></div>' +
+        '</div>' +
+        '<button type="submit" class="btn btn-primary">Registrar venda</button>' +
+        '<p class="hint">Se a peça não estava pronta, desmarque a caixinha — o painel desconta o filamento gasto em vez do estoque de peças.</p>' +
+      '</form>' +
+      '<div class="preview-panel"><h3 class="card-title" style="margin-bottom:14px">Prévia do resultado</h3><div id="sale-preview"></div></div>' +
+    '</div>'
+  );
+}
+
+function computeSalePreviewHTML() {
+  const pieceSel = document.getElementById('sale-piece');
+  const box = document.getElementById('sale-preview');
+  if (!pieceSel || !box) return;
+  const piece = state.catalog.find((p) => p.id === pieceSel.value);
+  const qty = parseInt(document.getElementById('sale-qty').value) || 1;
+  const platform = document.getElementById('sale-platform').value || 'shopee';
+  const price = parseFloat(document.getElementById('sale-price').value) || 0;
+  const availEl = document.getElementById('sale-available');
+  if (!piece) { box.innerHTML = '<p style="color:var(--text-faint);font-size:13px">Selecione uma peça.</p>'; if (availEl) availEl.textContent = ''; return; }
+  const preview = computeUnitCost(piece, state.filamentStock, state.config);
+  const feePercent = state.config.platformFees[platform] ?? 0;
+  const platformFeeCost = price * (feePercent / 100);
+  const totalCostUnit = preview.productionCost + platformFeeCost;
+  const profitUnit = price - totalCostUnit;
+  const marginPct = price > 0 ? (profitUnit / price) * 100 : 0;
+  const available = state.finishedStock[piece.id] || 0;
+  if (availEl) availEl.textContent = 'Em estoque pronto: ' + available + ' un.';
+  box.innerHTML =
+    previewRow('Filamento', fmtBRL(preview.filamentCost)) +
+    previewRow('Energia', fmtBRL(preview.energyCost)) +
+    previewRow('Mão de obra', fmtBRL(preview.laborCost)) +
+    previewRow('Embalagem', fmtBRL(preview.packagingCost)) +
+    previewRow('Taxa da plataforma (' + feePercent + '%)', fmtBRL(platformFeeCost)) +
+    '<div class="preview-divider"></div>' +
+    previewRow('Custo total / unidade', fmtBRL(totalCostUnit), true) +
+    previewRow('Lucro / unidade', fmtBRL(profitUnit), true, true) +
+    previewRow('Margem', fmtNum(marginPct, 1) + '%', true, true) +
+    '<div class="preview-divider"></div>' +
+    previewRow('Total (' + qty + 'x)', fmtBRL(price * qty), true) +
+    previewRow('Lucro total', fmtBRL(profitUnit * qty), true, true);
+}
+
+function bindSaleForm() {
+  if (!document.getElementById('sale-form')) return;
+  ['sale-piece', 'sale-platform', 'sale-qty', 'sale-price'].forEach((id) => {
+    const el = document.getElementById(id);
+    el.addEventListener('input', computeSalePreviewHTML);
+    el.addEventListener('change', computeSalePreviewHTML);
+  });
+  computeSalePreviewHTML();
+
+  document.getElementById('sale-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pieceId = document.getElementById('sale-piece').value;
+    const piece = state.catalog.find((p) => p.id === pieceId);
+    const quantity = parseInt(document.getElementById('sale-qty').value) || 1;
+    const platform = document.getElementById('sale-platform').value;
+    const price = parseFloat(document.getElementById('sale-price').value) || 0;
+    const fromStock = document.getElementById('sale-fromstock').checked;
+    const date = document.getElementById('sale-date').value || todayStr();
+
+    if (!piece || price <= 0 || quantity <= 0) {
+      showToast('Preencha peça, quantidade e valor de venda.', 'error');
+      return;
+    }
+
+    const preview = computeUnitCost(piece, state.filamentStock, state.config);
+    const feePercent = state.config.platformFees[platform] ?? 0;
+    const platformFeeCost = price * (feePercent / 100);
+    const totalCostUnit = preview.productionCost + platformFeeCost;
+    const profitUnit = price - totalCostUnit;
+
+    let nextFinished = { ...state.finishedStock };
+    let nextFilament = state.filamentStock;
+
+    if (fromStock) {
+      const have = nextFinished[piece.id] || 0;
+      if (have < quantity) showToast('Atenção: só havia ' + have + ' unidade(s) no estoque pronto dessa peça — o estoque foi zerado.', 'error');
+      nextFinished[piece.id] = Math.max(0, have - quantity);
+    } else {
+      const fil = state.filamentStock.find((f) => f.id === piece.filamentId);
+      if (fil) {
+        const used = (piece.weightGrams * quantity) / 1000;
+        nextFilament = state.filamentStock.map((f) => (f.id === fil.id ? { ...f, kg: Math.max(0, f.kg - used) } : f));
+        if (fil.kg < used) showToast('O filamento "' + fil.name + '" não tinha o suficiente — registre a compra de um rolo novo.', 'error');
+      }
+    }
+
+    const totalRevenue = price * quantity;
+    const totalProfit = profitUnit * quantity;
+    const sale = {
+      id: uid(), date, pieceId: piece.id, pieceName: piece.name, quantity, platform,
+      unitPrice: price, totalRevenue,
+      filamentCost: preview.filamentCost * quantity,
+      energyCost: preview.energyCost * quantity,
+      laborCost: preview.laborCost * quantity,
+      packagingCost: preview.packagingCost * quantity,
+      platformFeeCost: platformFeeCost * quantity,
+      totalCost: totalCostUnit * quantity,
+      totalProfit,
+      fromStock,
+    };
+
+    await persistSales([...state.sales, sale]);
+    await persistInventory(state.catalog, nextFilament, nextFinished);
+    showToast('Venda registrada: ' + fmtBRL(totalRevenue) + ' faturados, ' + fmtBRL(totalProfit) + ' de lucro.');
+    document.getElementById('sale-qty').value = 1;
+    document.getElementById('sale-price').value = '';
+    computeSalePreviewHTML();
+    refreshTabNav();
+  });
+}
+
+/* ---------- production form ---------- */
+function renderProductionForm() {
+  if (state.catalog.length === 0) return emptyNotice('Cadastre uma peça no <strong>Catálogo</strong> primeiro.');
+  const pieceOptions = state.catalog.map((p) => '<option value="' + p.id + '">' + esc(p.name) + '</option>').join('');
+  return (
+    '<form id="production-form" class="card card-pad" style="max-width:560px;display:flex;flex-direction:column;gap:16px">' +
+      '<h2 class="card-title" style="font-size:17px">Registrar produção</h2>' +
+      '<p style="font-size:13px;color:var(--text-dim);margin:0">Use aqui toda vez que uma impressão terminar e a peça for para o estoque, antes de vender.</p>' +
+      '<div><label class="field-label">Peça</label><select id="production-piece">' + pieceOptions + '</select></div>' +
+      '<div><label class="field-label">Quantidade produzida</label><input type="number" min="1" id="production-qty" value="1" class="font-num"></div>' +
+      '<div><label class="field-label">Data</label><input type="date" id="production-date" value="' + todayStr() + '" class="font-num"></div>' +
+      '<div id="production-preview"></div>' +
+      '<button type="submit" class="btn btn-primary">Adicionar ao estoque</button>' +
+    '</form>'
+  );
+}
+
+function computeProductionPreviewHTML() {
+  const pieceSel = document.getElementById('production-piece');
+  const box = document.getElementById('production-preview');
+  if (!pieceSel || !box) return;
+  const piece = state.catalog.find((p) => p.id === pieceSel.value);
+  const qty = parseInt(document.getElementById('production-qty').value) || 1;
+  if (!piece) { box.innerHTML = ''; return; }
+  const preview = computeUnitCost(piece, state.filamentStock, state.config);
+  box.innerHTML =
+    '<div style="background:#0B1424;border:1px solid var(--border);border-radius:10px;padding:14px;font-size:13px">' +
+      '<p style="color:var(--text-dim);margin:0">Vai consumir <span class="font-num" style="font-weight:600;color:var(--text)">' + fmtNum((piece.weightGrams * qty) / 1000, 3) + ' kg</span> de ' + esc(preview.filamentName) + '</p>' +
+      '<p style="color:var(--text-dim);margin:6px 0 0">Custo estimado da leva: <span class="font-num" style="font-weight:600;color:var(--text)">' + fmtBRL(preview.productionCost * qty) + '</span></p>' +
+    '</div>';
+}
+
+function bindProductionForm() {
+  if (!document.getElementById('production-form')) return;
+  ['production-piece', 'production-qty'].forEach((id) => {
+    const el = document.getElementById(id);
+    el.addEventListener('input', computeProductionPreviewHTML);
+    el.addEventListener('change', computeProductionPreviewHTML);
+  });
+  computeProductionPreviewHTML();
+
+  document.getElementById('production-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pieceId = document.getElementById('production-piece').value;
+    const piece = state.catalog.find((p) => p.id === pieceId);
+    const quantity = parseInt(document.getElementById('production-qty').value) || 1;
+    const date = document.getElementById('production-date').value || todayStr();
+    if (!piece || quantity <= 0) return;
+    const preview = computeUnitCost(piece, state.filamentStock, state.config);
+    const fil = state.filamentStock.find((f) => f.id === piece.filamentId);
+    const usedKg = (piece.weightGrams * quantity) / 1000;
+    let nextFilament = state.filamentStock;
+    if (fil) {
+      nextFilament = state.filamentStock.map((f) => (f.id === fil.id ? { ...f, kg: Math.max(0, f.kg - usedKg) } : f));
+      if (fil.kg < usedKg) showToast('O filamento "' + fil.name + '" não tinha o suficiente — compre um rolo novo.', 'error');
+    }
+    const nextFinished = { ...state.finishedStock, [piece.id]: (state.finishedStock[piece.id] || 0) + quantity };
+
+    const entry = { id: uid(), date, pieceId: piece.id, pieceName: piece.name, quantity, filamentUsedKg: usedKg, cost: preview.productionCost * quantity };
+    await persistProductionLog([...state.productionLog, entry]);
+    await persistInventory(state.catalog, nextFilament, nextFinished);
+    showToast(quantity + ' unidade(s) de "' + piece.name + '" foram para o estoque pronto.');
+    document.getElementById('production-qty').value = 1;
+    computeProductionPreviewHTML();
+    refreshTabNav();
+  });
+}
+
+/* ---------- catalog tab ---------- */
+function renderCatalogListRows() {
+  if (state.catalog.length === 0) return '<p style="padding:32px 20px;font-size:13px;color:var(--text-faint)">Nenhuma peça ainda. Cadastre a primeira ao lado.</p>';
+  return state.catalog.map((p) => {
+    const cost = computeUnitCost(p, state.filamentStock, state.config);
+    return (
+      '<div class="list-row" data-piece-row="' + p.id + '">' +
+        '<div>' +
+          '<p class="name">' + esc(p.name) + '</p>' +
+          '<p class="meta">' + p.weightGrams + 'g · ' + p.printHours + 'h de impressão · ' + esc(cost.filamentName) + '</p>' +
+          '<p class="meta2">custo estimado: ' + fmtBRL(cost.productionCost) + ' · pronto no estoque: ' + (state.finishedStock[p.id] || 0) + ' un.</p>' +
+        '</div>' +
+        '<button class="icon-btn" data-delete-piece="' + p.id + '">' + Icon('trash', 'icon-sm') + '</button>' +
+      '</div>'
+    );
+  }).join('');
+}
+
+function renderCatalogTab() {
+  const filamentOptions = state.filamentStock.map((f) => '<option value="' + f.id + '">' + esc(f.name) + '</option>').join('');
+  return (
+    '<div id="catalog-grid" style="display:grid;gap:24px;grid-template-columns:1fr">' +
+      '<style>@media(min-width:1024px){#catalog-grid{grid-template-columns:1fr 360px}}</style>' +
+      '<div class="card">' +
+        '<div class="card-header" style="display:flex;align-items:center;justify-content:space-between">' +
+          '<h3 class="card-title">Peças cadastradas</h3>' +
+          '<span id="catalog-count" style="font-size:11px;color:var(--text-faint)">' + state.catalog.length + ' peça(s)</span>' +
+        '</div>' +
+        '<div id="catalog-list">' + renderCatalogListRows() + '</div>' +
+      '</div>' +
+      '<form id="catalog-form" class="card card-pad" style="display:flex;flex-direction:column;gap:16px;height:fit-content">' +
+        '<h3 class="card-title">Nova peça</h3>' +
+        (state.filamentStock.length === 0
+          ? '<p style="font-size:11px;color:var(--amber-text);background:var(--amber-soft);border:1px solid rgba(217,118,6,.35);border-radius:10px;padding:10px;margin:0">Cadastre primeiro um filamento em "Estoque de Filamento" — toda peça precisa apontar para um tipo de filamento.</p>'
+          : '') +
+        '<div><label class="field-label">Nome da peça</label><input id="catalog-name" placeholder="Ex: Vaso geométrico P"></div>' +
+        '<div class="form-grid form-grid-2">' +
+          '<div><label class="field-label">Peso (gramas)</label><input type="number" step="0.1" id="catalog-weight" class="font-num"></div>' +
+          '<div><label class="field-label">Tempo de impressão (h)</label><input type="number" step="0.1" id="catalog-hours" class="font-num"></div>' +
+        '</div>' +
+        '<div><label class="field-label">Filamento usado</label><select id="catalog-filament">' + filamentOptions + '</select></div>' +
+        '<div class="form-grid form-grid-2">' +
+          '<div><label class="field-label">Mão de obra (opcional)</label><input type="number" step="0.01" id="catalog-labor" placeholder="padrão ' + fmtBRL(state.config.laborCostDefaultPerPiece) + '" class="font-num"></div>' +
+          '<div><label class="field-label">Embalagem (opcional)</label><input type="number" step="0.01" id="catalog-packaging" placeholder="padrão ' + fmtBRL(state.config.packagingCostDefault) + '" class="font-num"></div>' +
+        '</div>' +
+        '<div id="catalog-preview"></div>' +
+        '<button type="submit" class="btn btn-primary" id="catalog-submit" ' + (state.filamentStock.length === 0 ? 'disabled' : '') + '>Cadastrar peça</button>' +
+      '</form>' +
+    '</div>'
+  );
+}
+
+function computeCatalogPreviewHTML() {
+  const box = document.getElementById('catalog-preview');
+  if (!box) return;
+  const weightGrams = document.getElementById('catalog-weight').value;
+  const printHours = document.getElementById('catalog-hours').value;
+  const filamentId = document.getElementById('catalog-filament').value;
+  const laborOverride = document.getElementById('catalog-labor').value;
+  const packagingOverride = document.getElementById('catalog-packaging').value;
+  if (weightGrams && printHours && filamentId) {
+    const previewCost = computeUnitCost({
+      weightGrams: parseFloat(weightGrams) || 0,
+      printHours: parseFloat(printHours) || 0,
+      filamentId,
+      laborCostOverride: laborOverride ? parseFloat(laborOverride) : null,
+      packagingCostOverride: packagingOverride ? parseFloat(packagingOverride) : null,
+    }, state.filamentStock, state.config);
+    box.innerHTML =
+      '<div style="background:#0B1424;border:1px solid var(--border);border-radius:10px;padding:14px">' +
+        '<p style="font-size:12px;color:var(--text-faint);margin:0">Custo de produção estimado</p>' +
+        '<p class="font-num metal" style="font-size:20px;font-weight:700;margin:2px 0 0">' + fmtBRL(previewCost.productionCost) + '</p>' +
+        '<p style="font-size:11px;color:var(--text-faint);margin:6px 0 0">Para 3x de margem, venda por volta de ' + fmtBRL(previewCost.productionCost * 3) + '</p>' +
+      '</div>';
+  } else {
+    box.innerHTML = '';
+  }
+}
+
+function bindCatalogListDeleteButtons() {
+  document.querySelectorAll('[data-delete-piece]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-delete-piece');
+      const nextFinished = { ...state.finishedStock };
+      delete nextFinished[id];
+      await persistInventory(state.catalog.filter((p) => p.id !== id), state.filamentStock, nextFinished);
+      document.getElementById('catalog-list').innerHTML = renderCatalogListRows();
+      document.getElementById('catalog-count').textContent = state.catalog.length + ' peça(s)';
+      bindCatalogListDeleteButtons();
+      refreshTabNav();
+    });
+  });
+}
+
+function bindCatalogTab() {
+  ['catalog-weight', 'catalog-hours', 'catalog-filament', 'catalog-labor', 'catalog-packaging'].forEach((id) => {
+    const el = document.getElementById(id);
+    el.addEventListener('input', computeCatalogPreviewHTML);
+    el.addEventListener('change', computeCatalogPreviewHTML);
+  });
+  computeCatalogPreviewHTML();
+
+  document.getElementById('catalog-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('catalog-name').value.trim();
+    const weightGrams = document.getElementById('catalog-weight').value;
+    const printHours = document.getElementById('catalog-hours').value;
+    const filamentId = document.getElementById('catalog-filament').value;
+    const laborOverride = document.getElementById('catalog-labor').value;
+    const packagingOverride = document.getElementById('catalog-packaging').value;
+    if (!name || !weightGrams || !printHours || !filamentId) {
+      showToast('Preencha nome, peso, tempo de impressão e filamento.', 'error');
+      return;
+    }
+    const piece = {
+      id: uid(), name, weightGrams: parseFloat(weightGrams), printHours: parseFloat(printHours), filamentId,
+      laborCostOverride: laborOverride ? parseFloat(laborOverride) : null,
+      packagingCostOverride: packagingOverride ? parseFloat(packagingOverride) : null,
+    };
+    await persistInventory([...state.catalog, piece], state.filamentStock, state.finishedStock);
+    showToast('"' + name + '" cadastrada no catálogo.');
+    document.getElementById('catalog-name').value = '';
+    document.getElementById('catalog-weight').value = '';
+    document.getElementById('catalog-hours').value = '';
+    document.getElementById('catalog-labor').value = '';
+    document.getElementById('catalog-packaging').value = '';
+    computeCatalogPreviewHTML();
+    document.getElementById('catalog-list').innerHTML = renderCatalogListRows();
+    document.getElementById('catalog-count').textContent = state.catalog.length + ' peça(s)';
+    bindCatalogListDeleteButtons();
+    refreshTabNav();
+  });
+
+  bindCatalogListDeleteButtons();
+}
+
+/* ---------- filament tab ---------- */
+function renderFilamentListRows() {
+  if (state.filamentStock.length === 0) return '<p style="padding:32px 20px;font-size:13px;color:var(--text-faint)">Nenhum filamento cadastrado ainda.</p>';
+  return state.filamentStock.map((f) => {
+    const pct = Math.min(100, Math.round((f.kg / 1) * 100));
+    return (
+      '<div class="list-row" data-filament-row="' + f.id + '">' +
+        '<div class="donut-wrap">' +
+          '<div class="donut" style="background:conic-gradient(var(--cobalt) ' + (pct * 3.6) + 'deg, var(--border) 0deg)"><div class="donut-inner">' + pct + '%</div></div>' +
+          '<p class="donut-caption">rolo de 1kg</p>' +
+        '</div>' +
+        '<div style="flex:1">' +
+          '<p class="name">' + esc(f.name) + '</p>' +
+          '<p class="meta2">' + fmtNum(f.kg, 3) + ' kg restantes · ' + fmtBRL(f.pricePerKg) + '/kg</p>' +
+          (f.kg < 0.2 ? '<p class="low-warning">estoque baixo — hora de comprar um rolo novo</p>' : '') +
+        '</div>' +
+        '<button class="icon-btn" data-delete-filament="' + f.id + '">' + Icon('trash', 'icon-sm') + '</button>' +
+      '</div>'
+    );
+  }).join('');
+}
+
+function renderFilamentTab() {
+  return (
+    '<div id="filament-grid" style="display:grid;gap:24px;grid-template-columns:1fr">' +
+      '<style>@media(min-width:1024px){#filament-grid{grid-template-columns:1fr 340px}}</style>' +
+      '<div class="card">' +
+        '<div class="card-header"><h3 class="card-title">Rolos em estoque</h3></div>' +
+        '<div id="filament-list">' + renderFilamentListRows() + '</div>' +
+      '</div>' +
+      '<form id="filament-form" class="card card-pad" style="display:flex;flex-direction:column;gap:16px;height:fit-content">' +
+        '<h3 class="card-title">Registrar rolo de filamento</h3>' +
+        '<p class="hint" style="margin-top:-4px">Se o nome já existir, o painel só soma a quantidade nova ao estoque.</p>' +
+        '<div><label class="field-label">Nome / cor</label><input id="filament-name" placeholder="Ex: PLA Branco"></div>' +
+        '<div class="form-grid form-grid-2">' +
+          '<div><label class="field-label">Quantidade (kg)</label><input type="number" step="0.01" id="filament-kg" placeholder="1" class="font-num"></div>' +
+          '<div><label class="field-label">Preço por kg</label><input type="number" step="0.01" id="filament-price" placeholder="0,00" class="font-num"></div>' +
+        '</div>' +
+        '<button type="submit" class="btn btn-primary">Adicionar ao estoque</button>' +
+      '</form>' +
+    '</div>'
+  );
+}
+
+function bindFilamentListDeleteButtons() {
+  document.querySelectorAll('[data-delete-filament]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-delete-filament');
+      await persistInventory(state.catalog, state.filamentStock.filter((f) => f.id !== id), state.finishedStock);
+      document.getElementById('filament-list').innerHTML = renderFilamentListRows();
+      bindFilamentListDeleteButtons();
+      refreshTabNav();
+    });
+  });
+}
+
+function bindFilamentTab() {
+  document.getElementById('filament-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('filament-name').value.trim();
+    const kg = document.getElementById('filament-kg').value;
+    const pricePerKg = document.getElementById('filament-price').value;
+    if (!name || !kg || !pricePerKg) {
+      showToast('Preencha nome, quantidade e preço.', 'error');
+      return;
+    }
+    const existing = state.filamentStock.find((f) => f.name.toLowerCase() === name.toLowerCase());
+    let next;
+    if (existing) {
+      next = state.filamentStock.map((f) => (f.id === existing.id ? { ...f, kg: f.kg + parseFloat(kg), pricePerKg: parseFloat(pricePerKg) } : f));
+      showToast('Adicionado mais ' + kg + ' kg em "' + name + '".');
+    } else {
+      next = [...state.filamentStock, { id: uid(), name, kg: parseFloat(kg), pricePerKg: parseFloat(pricePerKg) }];
+      showToast('Filamento "' + name + '" cadastrado.');
+    }
+    await persistInventory(state.catalog, next, state.finishedStock);
+    document.getElementById('filament-name').value = '';
+    document.getElementById('filament-kg').value = '';
+    document.getElementById('filament-price').value = '';
+    document.getElementById('filament-list').innerHTML = renderFilamentListRows();
+    bindFilamentListDeleteButtons();
+    refreshTabNav();
+  });
+  bindFilamentListDeleteButtons();
+}
+
+/* ---------- config tab ---------- */
+function configField(id, label, value) {
+  return '<div><label class="field-label">' + esc(label) + '</label><input type="number" step="0.01" id="' + id + '" value="' + value + '" class="font-num"></div>';
+}
+
+function renderConfigTab() {
+  const c = state.config;
+  const machinesHtml = c.machines.map((m) =>
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:16px">' +
+      '<span style="font-size:13px;font-weight:600">' + esc(m.name) + '</span>' +
+      '<select data-machine-id="' + m.id + '" class="machine-status-select" style="width:auto">' +
+        '<option value="ativa"' + (m.status === 'ativa' ? ' selected' : '') + '>Imprimindo</option>' +
+        '<option value="parada"' + (m.status === 'parada' ? ' selected' : '') + '>Parada</option>' +
+        '<option value="aguardando"' + (m.status === 'aguardando' ? ' selected' : '') + '>Aguardando instalação</option>' +
+        '<option value="manutencao"' + (m.status === 'manutencao' ? ' selected' : '') + '>Manutenção</option>' +
+      '</select>' +
+    '</div>'
+  ).join('');
+
+  return (
+    '<form id="config-form" style="max-width:640px;display:flex;flex-direction:column;gap:20px">' +
+      '<div class="card card-pad">' +
+        '<h3 class="card-title">Custos fixos</h3>' +
+        '<p class="section-hint">Esses números alimentam o cálculo automático de todas as peças. Ajuste sempre que sua conta de luz ou o preço do filamento mudar.</p>' +
+        '<div class="form-grid form-grid-2">' +
+          configField('config-energy', 'Preço da energia (R$/kWh)', c.energyPricePerKWh) +
+          configField('config-power', 'Potência média da impressora (W)', c.printerPowerWatts) +
+          configField('config-labor', 'Mão de obra padrão (R$/peça)', c.laborCostDefaultPerPiece) +
+          configField('config-packaging', 'Embalagem padrão (R$/peça)', c.packagingCostDefault) +
+        '</div>' +
+      '</div>' +
+      '<div class="card card-pad">' +
+        '<h3 class="card-title">Taxas das plataformas (%)</h3>' +
+        '<p class="section-hint">Confira o percentual atual no painel de vendedor de cada plataforma — elas mudam de vez em quando.</p>' +
+        '<div class="form-grid form-grid-3">' +
+          configField('config-fee-shopee', 'Shopee', c.platformFees.shopee) +
+          configField('config-fee-tiktok', 'TikTok Shop', c.platformFees.tiktokshop) +
+          configField('config-fee-direto', 'Venda Direta', c.platformFees.direto) +
+        '</div>' +
+      '</div>' +
+      '<div class="card card-pad">' +
+        '<h3 class="card-title">Frota de impressoras</h3>' +
+        '<div style="display:flex;flex-direction:column;gap:14px;margin-top:14px">' + machinesHtml + '</div>' +
+      '</div>' +
+      '<button type="submit" class="btn btn-primary inline">Salvar configurações</button>' +
+    '</form>'
+  );
+}
+
+function bindConfigTab() {
+  document.getElementById('config-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const next = {
+      ...state.config,
+      energyPricePerKWh: parseFloat(document.getElementById('config-energy').value) || 0,
+      printerPowerWatts: parseFloat(document.getElementById('config-power').value) || 0,
+      laborCostDefaultPerPiece: parseFloat(document.getElementById('config-labor').value) || 0,
+      packagingCostDefault: parseFloat(document.getElementById('config-packaging').value) || 0,
+      platformFees: {
+        shopee: parseFloat(document.getElementById('config-fee-shopee').value) || 0,
+        tiktokshop: parseFloat(document.getElementById('config-fee-tiktok').value) || 0,
+        direto: parseFloat(document.getElementById('config-fee-direto').value) || 0,
+      },
+      machines: state.config.machines.map((m) => {
+        const sel = document.querySelector('.machine-status-select[data-machine-id="' + m.id + '"]');
+        return { ...m, status: sel ? sel.value : m.status };
+      }),
+    };
+    await persistConfig(next);
+    showToast('Configurações salvas.');
+    refreshHeader();
+  });
+}
+
+/* ---------- shell mount / refresh / dispatch ---------- */
+function refreshHeader() {
+  document.getElementById('header-slot').innerHTML = renderHeader(state.config);
+}
+function refreshTabNav() {
+  document.getElementById('tabnav-slot').innerHTML = renderTabNav(state.tab, currentAlerts());
+  bindTabNav();
+}
+function bindTabNav() {
+  document.querySelectorAll('.tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.tab = btn.getAttribute('data-tab');
+      refreshTabNav();
+      renderMain();
+    });
+  });
+}
+function renderMain() {
+  const slot = document.getElementById('main-slot');
+  switch (state.tab) {
+    case 'overview': slot.innerHTML = renderOverview(); break;
+    case 'sale': slot.innerHTML = renderSaleForm(); bindSaleForm(); break;
+    case 'production': slot.innerHTML = renderProductionForm(); bindProductionForm(); break;
+    case 'catalog': slot.innerHTML = renderCatalogTab(); bindCatalogTab(); break;
+    case 'filament': slot.innerHTML = renderFilamentTab(); bindFilamentTab(); break;
+    case 'config': slot.innerHTML = renderConfigTab(); bindConfigTab(); break;
+  }
+}
+function mountShell() {
+  document.getElementById('app-root').innerHTML =
+    '<div id="header-slot"></div>' +
+    '<div id="tabnav-slot"></div>' +
+    '<main class="content"><div class="wrap" id="main-slot"></div></main>' +
+    '<div id="footer-slot"></div>';
+  refreshHeader();
+  refreshTabNav();
+  renderMain();
+  document.getElementById('footer-slot').innerHTML = renderFooter();
+}
+
+/* ---------- init ---------- */
+(async function init() {
+  try {
+    const c = await window.storage.get('config');
+    if (c && c.value) state.config = { ...DEFAULT_CONFIG, ...JSON.parse(c.value) };
+  } catch (e) {}
+  try {
+    const inv = await window.storage.get('inventory');
+    if (inv && inv.value) {
+      const parsed = JSON.parse(inv.value);
+      state.catalog = parsed.catalog || [];
+      state.filamentStock = parsed.filamentStock || [];
+      state.finishedStock = parsed.finishedStock || {};
+    }
+  } catch (e) {}
+  try {
+    const s = await window.storage.get('sales');
+    if (s && s.value) state.sales = JSON.parse(s.value);
+  } catch (e) {}
+  try {
+    const p = await window.storage.get('productionLog');
+    if (p && p.value) state.productionLog = JSON.parse(p.value);
+  } catch (e) {}
+  state.loading = false;
+  mountShell();
+})();
+</script>
+</body>
+</html>
