@@ -237,25 +237,29 @@ const MACHINE_STATUS = {
 const PLATFORM_NAMES = { shopee: 'Shopee', tiktokshop: 'TikTok Shop', mercadolivre: 'Mercado Livre', whatsapp: 'WhatsApp', direto: 'Venda Direta' };
 
 const DEFAULT_SUPPLIES = [
-  { id: 'sup-argola-dourada', name: 'Argola para chaveiro (dourada)', qty: 0, unit: 'un.' },
-  { id: 'sup-argola-prateada', name: 'Argola para chaveiro (prateada)', qty: 0, unit: 'un.' },
-  { id: 'sup-corrente-dourada', name: 'Corrente para chaveiro (dourada)', qty: 0, unit: 'un.' },
-  { id: 'sup-corrente-prateada', name: 'Corrente para chaveiro (prateada)', qty: 0, unit: 'un.' },
-  { id: 'sup-switch', name: 'Switch', qty: 0, unit: 'un.' },
-  { id: 'sup-cola-tecbond', name: 'Cola Tecbond', qty: 0, unit: 'un.' },
-  { id: 'sup-plastico-bolha', name: 'Plástico bolha', qty: 0, unit: 'm' },
-  { id: 'sup-embalagens', name: 'Embalagens', qty: 0, unit: 'un.' },
+  { id: 'sup-argola-dourada', name: 'Argola para chaveiro (dourada)', qty: 0, unit: 'un.', unitPrice: 0 },
+  { id: 'sup-argola-prateada', name: 'Argola para chaveiro (prateada)', qty: 0, unit: 'un.', unitPrice: 0 },
+  { id: 'sup-corrente-dourada', name: 'Corrente para chaveiro (dourada)', qty: 0, unit: 'un.', unitPrice: 0 },
+  { id: 'sup-corrente-prateada', name: 'Corrente para chaveiro (prateada)', qty: 0, unit: 'un.', unitPrice: 0 },
+  { id: 'sup-switch', name: 'Switch', qty: 0, unit: 'un.', unitPrice: 0 },
+  { id: 'sup-cola-tecbond', name: 'Cola Tecbond', qty: 0, unit: 'un.', unitPrice: 0 },
+  { id: 'sup-plastico-bolha', name: 'Plástico bolha', qty: 0, unit: 'm', unitPrice: 0 },
+  { id: 'sup-embalagens', name: 'Embalagens', qty: 0, unit: 'un.', unitPrice: 0 },
 ];
 
-function computeUnitCost(piece, filamentStock, config) {
+function computeUnitCost(piece, filamentStock, config, suppliesStock) {
   const fil = filamentStock.find((f) => f.id === piece.filamentId);
   const pricePerKg = fil ? fil.pricePerKg : 0;
   const filamentCost = (piece.weightGrams / 1000) * pricePerKg;
   const energyCost = piece.printHours * (config.printerPowerWatts / 1000) * config.energyPricePerKWh;
   const laborCost = piece.laborCostOverride ?? config.laborCostDefaultPerPiece;
   const packagingCost = piece.packagingCostOverride ?? config.packagingCostDefault;
-  const productionCost = filamentCost + energyCost + laborCost + packagingCost;
-  return { filamentCost, energyCost, laborCost, packagingCost, productionCost, filamentName: fil ? fil.name : '—' };
+  const suppliesCost = (piece.supplyUsage || []).reduce((sum, u) => {
+    const sup = (suppliesStock || []).find((s) => s.id === u.supplyId);
+    return sum + (sup ? (sup.unitPrice || 0) * u.qty : 0);
+  }, 0);
+  const productionCost = filamentCost + energyCost + laborCost + packagingCost + suppliesCost;
+  return { filamentCost, energyCost, laborCost, packagingCost, suppliesCost, productionCost, filamentName: fil ? fil.name : '—' };
 }
 
 function computeTotals(sales) {
@@ -410,6 +414,38 @@ function statCard(label, value, amber) {
   return '<div class="card card-pad"><p class="stat-label">' + esc(label) + '</p><p class="stat-value ' + (amber ? 'amber-text' : 'metal') + '">' + value + '</p></div>';
 }
 
+function renderEfficiencyTable() {
+  if (state.catalog.length === 0) return '';
+  const rows = state.catalog
+    .filter((p) => p.printHours > 0)
+    .map((p) => {
+      const cost = computeUnitCost(p, state.filamentStock, state.config, state.supplies);
+      return {
+        name: p.name,
+        gramsPerHour: p.weightGrams / p.printHours,
+        costPerHour: cost.productionCost / p.printHours,
+      };
+    });
+  if (rows.length === 0) return '';
+  rows.sort((a, b) => a.costPerHour - b.costPerHour);
+
+  return '<div class="card" style="margin-bottom:16px">' +
+    '<div class="card-header"><h3 class="card-title">Eficiência de impressão (filamento × hora)</h3></div>' +
+    '<div style="overflow-x:auto"><table class="data-table"><thead><tr>' +
+      '<th>Peça</th><th style="text-align:right">g de filamento / h</th><th style="text-align:right">Custo de produção / h</th>' +
+    '</tr></thead><tbody>' +
+      rows.map((r, i) =>
+        '<tr>' +
+          '<td style="font-weight:600">' + esc(r.name) + (i === 0 ? ' <span style="font-size:9px;color:var(--amber-text);font-weight:700;letter-spacing:.05em;vertical-align:middle">MELHOR CUSTO-BENEFÍCIO</span>' : '') + '</td>' +
+          '<td class="num">' + fmtNum(r.gramsPerHour, 1) + ' g/h</td>' +
+          '<td class="num ' + (i === 0 ? 'amber-text' : '') + '">' + fmtBRL(r.costPerHour) + '/h</td>' +
+        '</tr>'
+      ).join('') +
+    '</tbody></table></div>' +
+    '<p style="font-size:11px;color:var(--text-faint);padding:12px 20px 16px;margin:0">Quanto menor o custo de produção por hora de impressão, mais peças (ou lucro) esse molde rende no mesmo tempo de máquina.</p>' +
+  '</div>';
+}
+
 function renderOverview() {
   const totals = computeTotals(state.sales);
   const lowFilament = state.filamentStock.filter((f) => f.kg < 0.2);
@@ -452,6 +488,8 @@ function renderOverview() {
       ).join('') +
     '</div>';
   }
+
+  out += renderEfficiencyTable();
 
   out += '<div class="card">' +
     '<div class="card-header"><h3 class="card-title">Últimas vendas</h3></div>' +
@@ -570,7 +608,7 @@ function computeSalePreviewHTML() {
   const price = parseFloat(document.getElementById('sale-price').value) || 0;
   const availEl = document.getElementById('sale-available');
   if (!piece) { box.innerHTML = '<p style="color:var(--text-faint);font-size:13px">Selecione uma peça.</p>'; if (availEl) availEl.textContent = ''; return; }
-  const preview = computeUnitCost(piece, state.filamentStock, state.config);
+  const preview = computeUnitCost(piece, state.filamentStock, state.config, state.supplies);
   const feePercent = state.config.platformFees[platform] ?? 0;
   const platformFeeCost = price * (feePercent / 100);
   const totalCostUnit = preview.productionCost + platformFeeCost;
@@ -588,6 +626,7 @@ function computeSalePreviewHTML() {
     previewRow('Energia', fmtBRL(preview.energyCost)) +
     previewRow('Mão de obra', fmtBRL(preview.laborCost)) +
     previewRow('Embalagem', fmtBRL(preview.packagingCost)) +
+    previewRow('Insumos extras', fmtBRL(preview.suppliesCost)) +
     previewRow('Taxa da plataforma (' + feePercent + '%)', fmtBRL(platformFeeCost)) +
     '<div class="preview-divider"></div>' +
     previewRow('Custo total / unidade', fmtBRL(totalCostUnit), true) +
@@ -649,7 +688,7 @@ function bindSaleForm() {
       baseFilament = reversed.nextFilament;
     }
 
-    const preview = computeUnitCost(piece, baseFilament, state.config);
+    const preview = computeUnitCost(piece, baseFilament, state.config, state.supplies);
     const feePercent = state.config.platformFees[platform] ?? 0;
     const platformFeeCost = price * (feePercent / 100);
     const totalCostUnit = preview.productionCost + platformFeeCost;
@@ -746,7 +785,7 @@ function computeProductionPreviewHTML() {
   const piece = state.catalog.find((p) => p.id === pieceSel.value);
   const qty = parseInt(document.getElementById('production-qty').value) || 1;
   if (!piece) { box.innerHTML = ''; return; }
-  const preview = computeUnitCost(piece, state.filamentStock, state.config);
+  const preview = computeUnitCost(piece, state.filamentStock, state.config, state.supplies);
   box.innerHTML =
     '<div style="background:#0B1424;border:1px solid var(--border);border-radius:10px;padding:14px;font-size:13px">' +
       '<p style="color:var(--text-dim);margin:0">Vai consumir <span class="font-num" style="font-weight:600;color:var(--text)">' + fmtNum((piece.weightGrams * qty) / 1000, 3) + ' kg</span> de ' + esc(preview.filamentName) + '</p>' +
@@ -811,7 +850,7 @@ function bindProductionForm() {
     for (const line of lines) {
       const piece = state.catalog.find((p) => p.id === line.pieceId);
       if (!piece) continue;
-      const preview = computeUnitCost(piece, nextFilament, state.config);
+      const preview = computeUnitCost(piece, nextFilament, state.config, state.supplies);
       const fil = nextFilament.find((f) => f.id === piece.filamentId);
       const usedKg = (piece.weightGrams * line.quantity) / 1000;
       if (fil) {
@@ -834,16 +873,28 @@ function bindProductionForm() {
 }
 
 /* ---------- catalog tab ---------- */
+let catalogSupplyDraft = [];
+
+function formatSupplyUsage(piece) {
+  if (!piece.supplyUsage || piece.supplyUsage.length === 0) return '';
+  return piece.supplyUsage.map((u) => {
+    const sup = state.supplies.find((s) => s.id === u.supplyId);
+    return sup ? esc(sup.name) + ' × ' + u.qty : null;
+  }).filter(Boolean).join(', ');
+}
+
 function renderCatalogListRows() {
   if (state.catalog.length === 0) return '<p style="padding:32px 20px;font-size:13px;color:var(--text-faint)">Nenhuma peça ainda. Cadastre a primeira ao lado.</p>';
   return state.catalog.map((p) => {
-    const cost = computeUnitCost(p, state.filamentStock, state.config);
+    const cost = computeUnitCost(p, state.filamentStock, state.config, state.supplies);
+    const usageText = formatSupplyUsage(p);
     return (
       '<div class="list-row" data-piece-row="' + p.id + '">' +
         '<div>' +
           '<p class="name">' + esc(p.name) + '</p>' +
           '<p class="meta">' + p.weightGrams + 'g · ' + p.printHours + 'h de impressão · ' + esc(cost.filamentName) + '</p>' +
           '<p class="meta2">custo estimado: ' + fmtBRL(cost.productionCost) + ' · pronto no estoque: ' + (state.finishedStock[p.id] || 0) + ' un.</p>' +
+          (usageText ? '<p class="meta">insumos: ' + usageText + '</p>' : '') +
         '</div>' +
         '<button class="icon-btn" data-delete-piece="' + p.id + '">' + Icon('trash', 'icon-sm') + '</button>' +
       '</div>'
@@ -851,8 +902,25 @@ function renderCatalogListRows() {
   }).join('');
 }
 
+function renderCatalogSupplyDraftList() {
+  if (catalogSupplyDraft.length === 0) return '';
+  return '<div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">' +
+    catalogSupplyDraft.map((u, idx) => {
+      const sup = state.supplies.find((s) => s.id === u.supplyId);
+      return (
+        '<div style="display:flex;align-items:center;justify-content:space-between;background:#0B1424;border:1px solid var(--border);border-radius:10px;padding:10px 12px">' +
+          '<span style="font-size:13px">' + (sup ? esc(sup.name) : '—') + ' <span class="font-num" style="color:var(--text-dim)">× ' + u.qty + '</span></span>' +
+          '<button type="button" class="icon-btn" data-remove-catalog-supply="' + idx + '">' + Icon('x', 'icon-sm') + '</button>' +
+        '</div>'
+      );
+    }).join('') +
+  '</div>';
+}
+
 function renderCatalogTab() {
+  catalogSupplyDraft = [];
   const filamentOptions = state.filamentStock.map((f) => '<option value="' + f.id + '">' + esc(f.name) + '</option>').join('');
+  const supplyOptions = state.supplies.map((s) => '<option value="' + s.id + '">' + esc(s.name) + '</option>').join('');
   return (
     '<div id="catalog-grid" style="display:grid;gap:24px;grid-template-columns:1fr">' +
       '<style>@media(min-width:1024px){#catalog-grid{grid-template-columns:1fr 360px}}</style>' +
@@ -874,6 +942,18 @@ function renderCatalogTab() {
           '<div><label class="field-label">Tempo de impressão (h)</label><input type="number" step="0.1" id="catalog-hours" class="font-num"></div>' +
         '</div>' +
         '<div><label class="field-label">Filamento usado</label><select id="catalog-filament">' + filamentOptions + '</select></div>' +
+        (state.supplies.length > 0 ? (
+          '<div>' +
+            '<label class="field-label">Insumos extras (opcional)</label>' +
+            '<p class="hint" style="margin-top:2px">Ex: argola e corrente para transformar em chaveiro — entra no custo total da peça.</p>' +
+            '<div class="form-grid form-grid-2" style="margin-top:8px">' +
+              '<select id="catalog-supply-select">' + supplyOptions + '</select>' +
+              '<input type="number" min="1" step="1" id="catalog-supply-qty" value="1" class="font-num" placeholder="Qtd">' +
+            '</div>' +
+            '<button type="button" id="catalog-supply-add" class="btn" style="background:var(--surface-2);color:var(--text);border:1px solid var(--border);width:100%;margin-top:8px">+ Adicionar insumo</button>' +
+            '<div id="catalog-supply-draft-list">' + renderCatalogSupplyDraftList() + '</div>' +
+          '</div>'
+        ) : '') +
         '<div class="form-grid form-grid-2">' +
           '<div><label class="field-label">Mão de obra (opcional)</label><input type="number" step="0.01" id="catalog-labor" placeholder="padrão ' + fmtBRL(state.config.laborCostDefaultPerPiece) + '" class="font-num"></div>' +
           '<div><label class="field-label">Embalagem (opcional)</label><input type="number" step="0.01" id="catalog-packaging" placeholder="padrão ' + fmtBRL(state.config.packagingCostDefault) + '" class="font-num"></div>' +
@@ -900,11 +980,13 @@ function computeCatalogPreviewHTML() {
       filamentId,
       laborCostOverride: laborOverride ? parseFloat(laborOverride) : null,
       packagingCostOverride: packagingOverride ? parseFloat(packagingOverride) : null,
-    }, state.filamentStock, state.config);
+      supplyUsage: catalogSupplyDraft,
+    }, state.filamentStock, state.config, state.supplies);
     box.innerHTML =
       '<div style="background:#0B1424;border:1px solid var(--border);border-radius:10px;padding:14px">' +
         '<p style="font-size:12px;color:var(--text-faint);margin:0">Custo de produção estimado</p>' +
         '<p class="font-num metal" style="font-size:20px;font-weight:700;margin:2px 0 0">' + fmtBRL(previewCost.productionCost) + '</p>' +
+        (previewCost.suppliesCost > 0 ? '<p style="font-size:11px;color:var(--amber-text);margin:6px 0 0">inclui ' + fmtBRL(previewCost.suppliesCost) + ' de insumos extras</p>' : '') +
         '<p style="font-size:11px;color:var(--text-faint);margin:6px 0 0">Para 3x de margem, venda por volta de ' + fmtBRL(previewCost.productionCost * 3) + '</p>' +
       '</div>';
   } else {
@@ -927,6 +1009,18 @@ function bindCatalogListDeleteButtons() {
   });
 }
 
+function bindCatalogSupplyDraftRemoveButtons() {
+  document.querySelectorAll('[data-remove-catalog-supply]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-remove-catalog-supply'), 10);
+      catalogSupplyDraft.splice(idx, 1);
+      document.getElementById('catalog-supply-draft-list').innerHTML = renderCatalogSupplyDraftList();
+      bindCatalogSupplyDraftRemoveButtons();
+      computeCatalogPreviewHTML();
+    });
+  });
+}
+
 function bindCatalogTab() {
   ['catalog-weight', 'catalog-hours', 'catalog-filament', 'catalog-labor', 'catalog-packaging'].forEach((id) => {
     const el = document.getElementById(id);
@@ -934,6 +1028,25 @@ function bindCatalogTab() {
     el.addEventListener('change', computeCatalogPreviewHTML);
   });
   computeCatalogPreviewHTML();
+
+  const supplyAddBtn = document.getElementById('catalog-supply-add');
+  if (supplyAddBtn) {
+    supplyAddBtn.addEventListener('click', () => {
+      const sel = document.getElementById('catalog-supply-select');
+      const qtyInput = document.getElementById('catalog-supply-qty');
+      const qty = parseFloat(qtyInput.value) || 0;
+      if (!sel.value || qty <= 0) {
+        showToast('Selecione um insumo e uma quantidade válida.', 'error');
+        return;
+      }
+      catalogSupplyDraft.push({ supplyId: sel.value, qty });
+      qtyInput.value = 1;
+      document.getElementById('catalog-supply-draft-list').innerHTML = renderCatalogSupplyDraftList();
+      bindCatalogSupplyDraftRemoveButtons();
+      computeCatalogPreviewHTML();
+    });
+    bindCatalogSupplyDraftRemoveButtons();
+  }
 
   document.getElementById('catalog-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -951,18 +1064,11 @@ function bindCatalogTab() {
       id: uid(), name, weightGrams: parseFloat(weightGrams), printHours: parseFloat(printHours), filamentId,
       laborCostOverride: laborOverride ? parseFloat(laborOverride) : null,
       packagingCostOverride: packagingOverride ? parseFloat(packagingOverride) : null,
+      supplyUsage: [...catalogSupplyDraft],
     };
     await persistInventory([...state.catalog, piece], state.filamentStock, state.finishedStock);
     showToast('"' + name + '" cadastrada no catálogo.');
-    document.getElementById('catalog-name').value = '';
-    document.getElementById('catalog-weight').value = '';
-    document.getElementById('catalog-hours').value = '';
-    document.getElementById('catalog-labor').value = '';
-    document.getElementById('catalog-packaging').value = '';
-    computeCatalogPreviewHTML();
-    document.getElementById('catalog-list').innerHTML = renderCatalogListRows();
-    document.getElementById('catalog-count').textContent = state.catalog.length + ' peça(s)';
-    bindCatalogListDeleteButtons();
+    renderMain();
     refreshTabNav();
   });
 
@@ -1011,7 +1117,7 @@ function renderProductsStockRows() {
         '<div><p class="name">' + esc(p.name) + '</p><p class="meta' + (qty < 2 ? '' : '2') + '">' + (qty < 2 ? 'estoque baixo' : (qty + ' un. em estoque')) + '</p></div>' +
         '<div style="display:flex;align-items:center;gap:8px">' +
           '<input type="number" min="0" class="font-num" style="width:90px;margin-top:0" value="' + qty + '" data-product-stock-input="' + p.id + '">' +
-          '<button type="button" class="btn" style="background:var(--cobalt-dark);color:#fff;padding:9px 14px" data-product-stock-save="' + p.id + '">Ajustar</button>' +
+          '<button type="button" class="btn" style="background:var(--cobalt-dark);color:#fff;padding:9px 14px" data-product-stock-save="' + p.id + '">Registrar</button>' +
         '</div>' +
       '</div>'
     );
@@ -1035,7 +1141,7 @@ function bindProductsStockSection() {
       const value = Math.max(0, parseInt(input.value) || 0);
       const nextFinished = { ...state.finishedStock, [id]: value };
       await persistInventory(state.catalog, state.filamentStock, nextFinished);
-      showToast('Estoque ajustado.');
+      showToast('Estoque registrado.');
       document.getElementById('products-stock-list').innerHTML = renderProductsStockRows();
       bindProductsStockSection();
       refreshTabNav();
@@ -1048,10 +1154,11 @@ function renderSuppliesRows() {
   if (state.supplies.length === 0) return '<p style="padding:32px 20px;font-size:13px;color:var(--text-faint)">Nenhum suprimento cadastrado ainda.</p>';
   return state.supplies.map((s) =>
     '<div class="list-row" data-supply-row="' + s.id + '">' +
-      '<div><p class="name">' + esc(s.name) + '</p><p class="meta2">' + fmtNum(s.qty, 0) + ' ' + esc(s.unit || 'un.') + '</p></div>' +
-      '<div style="display:flex;align-items:center;gap:8px">' +
-        '<input type="number" min="0" class="font-num" style="width:90px;margin-top:0" value="' + s.qty + '" data-supply-input="' + s.id + '">' +
-        '<button type="button" class="btn" style="background:var(--cobalt-dark);color:#fff;padding:9px 14px" data-supply-save="' + s.id + '">Ajustar</button>' +
+      '<div><p class="name">' + esc(s.name) + '</p><p class="meta2">' + fmtNum(s.qty, 0) + ' ' + esc(s.unit || 'un.') + ' · ' + fmtBRL(s.unitPrice || 0) + '/' + esc(s.unit || 'un.') + '</p></div>' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">' +
+        '<div><label class="field-label" style="margin-bottom:2px">Qtd.</label><input type="number" min="0" class="font-num" style="width:80px;margin-top:2px" value="' + s.qty + '" data-supply-qty-input="' + s.id + '"></div>' +
+        '<div><label class="field-label" style="margin-bottom:2px">R$/' + esc(s.unit || 'un.') + '</label><input type="number" min="0" step="0.01" class="font-num" style="width:90px;margin-top:2px" value="' + (s.unitPrice || 0) + '" data-supply-price-input="' + s.id + '"></div>' +
+        '<button type="button" class="btn" style="background:var(--cobalt-dark);color:#fff;padding:9px 14px" data-supply-save="' + s.id + '">Registrar</button>' +
         '<button class="icon-btn" data-delete-supply="' + s.id + '">' + Icon('trash', 'icon-sm') + '</button>' +
       '</div>' +
     '</div>'
@@ -1068,11 +1175,12 @@ function renderSuppliesSection() {
       '</div>' +
       '<form id="supplies-form" class="card card-pad" style="display:flex;flex-direction:column;gap:16px;height:fit-content">' +
         '<h3 class="card-title">Novo item</h3>' +
-        '<p class="hint" style="margin-top:-4px">Se o nome já existir, o painel só soma a quantidade nova.</p>' +
+        '<p class="hint" style="margin-top:-4px">Se o nome já existir, o painel só soma a quantidade nova e atualiza o preço.</p>' +
         '<div><label class="field-label">Nome</label><input id="supply-name" placeholder="Ex: Argola para chaveiro (dourada)"></div>' +
-        '<div class="form-grid form-grid-2">' +
+        '<div class="form-grid form-grid-3">' +
           '<div><label class="field-label">Quantidade</label><input type="number" min="0" step="1" id="supply-qty" placeholder="0" class="font-num"></div>' +
           '<div><label class="field-label">Unidade</label><input id="supply-unit" placeholder="un." value="un."></div>' +
+          '<div><label class="field-label">Preço/un.</label><input type="number" min="0" step="0.01" id="supply-price" placeholder="0,00" class="font-num"></div>' +
         '</div>' +
         '<button type="submit" class="btn btn-primary">Adicionar</button>' +
       '</form>' +
@@ -1084,10 +1192,12 @@ function bindSupplyRowActions() {
   document.querySelectorAll('[data-supply-save]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-supply-save');
-      const input = document.querySelector('[data-supply-input="' + id + '"]');
-      const value = Math.max(0, parseInt(input.value) || 0);
-      await persistSupplies(state.supplies.map((s) => (s.id === id ? { ...s, qty: value } : s)));
-      showToast('Estoque ajustado.');
+      const qtyInput = document.querySelector('[data-supply-qty-input="' + id + '"]');
+      const priceInput = document.querySelector('[data-supply-price-input="' + id + '"]');
+      const qty = Math.max(0, parseInt(qtyInput.value) || 0);
+      const unitPrice = Math.max(0, parseFloat(priceInput.value) || 0);
+      await persistSupplies(state.supplies.map((s) => (s.id === id ? { ...s, qty, unitPrice } : s)));
+      showToast('Estoque registrado.');
       document.getElementById('supplies-list').innerHTML = renderSuppliesRows();
       bindSupplyRowActions();
     });
@@ -1110,20 +1220,22 @@ function bindSuppliesSection() {
     const name = document.getElementById('supply-name').value.trim();
     const qty = parseFloat(document.getElementById('supply-qty').value) || 0;
     const unit = document.getElementById('supply-unit').value.trim() || 'un.';
+    const unitPrice = parseFloat(document.getElementById('supply-price').value) || 0;
     if (!name) { showToast('Digite o nome do item.', 'error'); return; }
     const existing = state.supplies.find((s) => s.name.toLowerCase() === name.toLowerCase());
     let next;
     if (existing) {
-      next = state.supplies.map((s) => (s.id === existing.id ? { ...s, qty: s.qty + qty, unit } : s));
+      next = state.supplies.map((s) => (s.id === existing.id ? { ...s, qty: s.qty + qty, unit, unitPrice } : s));
       showToast('Adicionado mais ' + qty + ' ' + unit + ' em "' + name + '".');
     } else {
-      next = [...state.supplies, { id: uid(), name, qty, unit }];
+      next = [...state.supplies, { id: uid(), name, qty, unit, unitPrice }];
       showToast('"' + name + '" cadastrado no estoque.');
     }
     await persistSupplies(next);
     document.getElementById('supply-name').value = '';
     document.getElementById('supply-qty').value = '';
     document.getElementById('supply-unit').value = 'un.';
+    document.getElementById('supply-price').value = '';
     document.getElementById('supplies-list').innerHTML = renderSuppliesRows();
     bindSupplyRowActions();
   });
