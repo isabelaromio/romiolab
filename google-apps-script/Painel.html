@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Romio Lab 3D — Central de Produção</title>
+<base target="_top">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
 
@@ -192,17 +193,25 @@ input::placeholder { color:var(--text-faint); }
 <div id="app-root"><div class="loading-screen">carregando painel...</div></div>
 
 <script>
-/* ---------- storage shim (localStorage-backed, same interface the original relied on) ---------- */
-const STORAGE_PREFIX = 'romio_lab_3d__';
+/* ---------- storage shim (backed by the Google Sheet through Apps Script's
+   google.script.run bridge — same get/set({value}) interface as the
+   standalone version, so none of the app logic below needed to change) ---------- */
 window.storage = {
-  async get(key) {
-    try {
-      const raw = localStorage.getItem(STORAGE_PREFIX + key);
-      return raw === null ? null : { value: raw };
-    } catch (e) { return null; }
+  get(key) {
+    return new Promise((resolve) => {
+      google.script.run
+        .withSuccessHandler((raw) => resolve(raw === null || raw === undefined ? null : { value: raw }))
+        .withFailureHandler(() => resolve(null))
+        .getData(key);
+    });
   },
-  async set(key, value) {
-    localStorage.setItem(STORAGE_PREFIX + key, value);
+  set(key, value) {
+    return new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(() => resolve())
+        .withFailureHandler((err) => reject(err))
+        .setData(key, value);
+    });
   },
 };
 
